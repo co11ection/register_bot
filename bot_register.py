@@ -38,39 +38,48 @@ def process_email(message):
     
 @bot.message_handler(func=lambda message: user_data.get(message.chat.id, {}).get('step') == 'password')
 def process_password(message):
-    user_data[message.chat.id]['password'] = message.text
-
-    data = {
-        'full_name': user_data[message.chat.id]['fullname'],
-        'phone_number': user_data[message.chat.id]['phone_number'],
-        'email': user_data[message.chat.id]['email'],
-        'password': user_data[message.chat.id]['password'],
-    }
-    response = requests.post(f'{API_BASE_URL}/register/', data=data)
-    if response.status_code == 201:
-        bot.send_message(message.chat.id, "Регистрация успешно завершена!")
+    if not validate_password(message.text):
+        bot.send_message(message.chat.id, "Пожалуйста, снова введите ваш пороль. Он должен состоять как минимум из 8 символов")
+        bot.send_message(message.chat.id, "Так же он должен содержать в себе тока числа и буквы")
+        user_data[message.chat.id]['step'] = 'password'
+    else:
+        user_data[message.chat.id]['password'] = message.text
+        data = {
+            'full_name': user_data[message.chat.id]['fullname'],
+            'phone_number': user_data[message.chat.id]['phone_number'],
+            'email': user_data[message.chat.id]['email'],
+            'password': user_data[message.chat.id]['password'],
+        }
+        response = requests.post(f'{API_BASE_URL}/register/', data=data)
+        if response.status_code == 201:
+            bot.send_message(message.chat.id, "Регистрация успешно завершена!")
         
-    elif response.status_code == 400:
-        try: 
-            email_error = response.json().get('email')[0]
-            if email_error == 'custom user with this email already exists.':
-                bot.send_message(message.chat.id, 'Email с таким пользователем уже существует')
+        elif response.status_code == 400:
+            try: 
+                email_error = response.json().get('email')[0]
+                if email_error == 'custom user with this email already exists.':
+                    bot.send_message(message.chat.id, 'Email с таким пользователем уже существует')
             
-        except:
-            bot.send_message(message.chat.id, "Что-то пошло не так при регистрации. Попробуйте позже.")
-        try:
-            password_error = response.json().get('password')[0]
-            if password_error == "Ensure this field has at least 8 characters.":
-                bot.send_message(message.chat.id, 'Пороль должен состоять как минимум из 8 символов')
-        except:
+            except:
+                bot.send_message(message.chat.id, "Что-то пошло не так при регистрации. Попробуйте позже.") 
+    
+        else:
             bot.send_message(message.chat.id, "Что-то пошло не так при регистрации. Попробуйте позже.")   
     
-    else:
-        bot.send_message(message.chat.id, "Что-то пошло не так при регистрации. Попробуйте позже.")   
-    
         
 
-    user_data.pop(message.chat.id, None)
+        user_data.pop(message.chat.id, None)
+
+
+def validate_password(password):
+    forbidden_symbols = "!@#$%^&*()_+{|}[]\/.,;"''"-=`~:<>?"
+    for elemen in password:
+        if not elemen in forbidden_symbols and len(password) >= 8:
+            continue
+        return False
+    return True
+         
+
 
 if __name__ == '__main__':
     bot.polling()

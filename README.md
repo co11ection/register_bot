@@ -5,4 +5,4 @@
 5. python3 manage.py migrate
 6. python3 manage.py runserver
 7. открыть новый терминал и запустить бота
-8. python3 register_bot
+8. python3 register_bot.py
